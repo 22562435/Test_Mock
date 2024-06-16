@@ -1,0 +1,37 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.Ruserdata
+
+# Example code in documentation
+-ex.R
+
+# Output files
+*.csv
+*.rds
+*.RData
+
+# RStudio files
+.Rproj.user/
+.Rproj.user/**
+
+# RStudio project files
+*.Rproj
+
+# Packrat library
+packrat/lib*
+packrat/src/
+
+# Compiled code
+*.o
+*.so
+*.dll
+
+# Logs
+*.log
+
+# Temporary files
+.tmp/
