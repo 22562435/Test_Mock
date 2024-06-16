@@ -1,0 +1,283 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# Purpose
+
+Purpose of this work folder.
+
+Ideally store a minimum working example data set in data folder.
+
+Add binary files in bin, and closed R functions in code. Human Readable settings files (e.g. csv) should be placed in settings/
+
+
+```{r}
+
+rm(list = ls()) # Clean your environment:
+gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+library(tidyverse)
+library(tibble)
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+#Question 1
+
+
+Initial data
+```{r}
+temp <- list.files(path="data/Happy/.") #fetching the file names
+for (i in 1:length(temp)) assign(gsub(pattern = ".csv",x=temp[i],replacement = ""), read.csv(paste("data/Happy/",temp[i],sep="")))#importing them into r
+rm(i,temp)#removing temporary variables
+```
+```{r}
+source("code/import_multiple_csv.r")
+import_multiple_csv("data/Happy/.")
+
+```
+
+
+
+
+```{r import data}
+source("code/import_multiple_csv_and_join.r")
+# data <- import_multiple_csv_and_join("data/Happy/.") %>% gather(variable, value, -c(Country.name, Regional.indicator))
+data <- import_multiple_csv_and_join("data/Happy/.") 
+```
+
+
+
+```{r,fig.height=7}
+library(ggplot2)
+library(dplyr)
+
+# Function to create the plot
+create_region_plot <- function(data) {
+  
+  # Arrange the data by Regional.indicator and Healthy.life.expectancy
+  data <- data %>%
+    arrange(Regional.indicator, Healthy.life.expectancy)
+  
+  # Create the plot
+  p <- ggplot(data, aes(x = reorder(Country.name, Healthy.life.expectancy), y = Ladder.score, fill = Regional.indicator)) +
+    geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = lowerwhisker, ymax = upperwhisker), width = 0.2) +
+    labs(x = "Country", y = "Ladder Score", title = "Ladder Score by Country with Error Bars") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none") +
+    scale_fill_brewer(palette = "Set3") + # Using a color palette from RColorBrewer
+    facet_wrap(~ Regional.indicator, scales = "free")
+  
+  return(p)
+}
+p <- create_region_plot(data)
+print(p)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+# Question 2 redux
+```{r}
+rm(list = ls()) # Clean your environment:
+gc() 
+wine<-readRDS("data/Wine/WineMag.rds")
+
+```
+Plot how many ratings each country received as a barplot, with the median score placed
+vertically above each bar.
+```{r table , fig.height=6}
+barplotdata<-wine %>% 
+    filter(!is.na(country)) %>% 
+    group_by(country) %>% 
+    summarise(reviews=n(),medianscore=median(points,na.rm = TRUE),logreviews=log(reviews,base = 10)) %>% 
+    ungroup() 
+
+
+barplot <- ggplot(barplotdata, aes(x = reorder(country, reviews), y = logreviews)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = medianscore), vjust = -0.5) +
+  labs(x = "", y = "Logged Number of Reviews", title = "Number of Reviews per Country with Median Scores") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(barplot)
+
+```
+
+
+
+
+
+```{r frequency table}
+library(stringr)
+wine %>% filter(!is.na(description)) %>% 
+    mutate(description = iconv(description, from = "", to = "UTF-8")) %>%
+    summarise(
+    reviews = n(),
+    tannins = sum(str_detect(tolower(description), "tannins"))
+  )
+
+
+
+```
+
+
+
+```{r}
+library(knitr)
+# Convert descriptions to lowercase and UTF-8 encoding to avoid issues
+wine <- wine %>%
+  filter(!is.na(description)) %>%
+  mutate(description = iconv(tolower(description), from = "", to = "UTF-8"))
+
+# Count occurrences of the specified words
+word_counts <- wine %>%
+  summarise(
+    total_reviews = n(),
+    tannins = sum(str_detect(description, "\\btannins\\b")),
+    smoke_smokey_ash = sum(str_detect(description, "\\b(smoke|smokey|ash)\\b")),
+    wooded_wooden_woody = sum(str_detect(description, "\\b(wooded|wooden|woody)\\b"))
+  )
+
+kable(word_counts)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Question 2
+```{r}
+wine<-readRDS("data/Wine/WineMag.rds")
+
+country_stats <- wine %>%
+  filter(!is.na(points)) %>%
+  group_by(country) %>%
+  summarise(
+    num_ratings = n(),
+    median_score = median(points, na.rm = TRUE)
+  )
+
+
+ggplot(country_stats, aes(x = country, y = num_ratings)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = median_score, y = num_ratings + 1), vjust = 0) +
+  labs(
+    title = "Number of Ratings per Country with Median Scores",
+    x = "Country",
+    y = "Number of Ratings"
+  ) +
+  theme_minimal()
+
+
+
+```
+
+#
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+```
+
+```{r}
+words <- c("tannins", "smoke|smokey|ash", "wooded|wooden|woody")
+
+# Define a function to count occurrences of each word group
+count_words <- function(description, words) {
+  sapply(words, function(word) {
+    sum(str_detect(description, word))
+  })
+}
+
+# Apply the function to the descriptions
+word_counts <- wine %>%
+  mutate(description = tolower(description)) %>%
+  rowwise() %>%
+  mutate(
+    tannins_count = sum(str_count(description, "tannins")),
+    smoke_smokey_ash_count = sum(str_count(description, "smoke|smokey|ash")),
+    wooded_wooden_woody_count = sum(str_count(description, "wooded|wooden|woody"))
+  ) %>%
+  ungroup() %>%
+  select(taster_name, tannins_count, smoke_smokey_ash_count, wooded_wooden_woody_count)
+
+```
+```{r}
+sommelier_word_counts <- word_counts %>%
+  group_by(taster_name) %>%
+  summarise(
+    tannins_total = sum(tannins_count),
+    smoke_smokey_ash_total = sum(smoke_smokey_ash_count),
+    wooded_wooden_woody_total = sum(wooded_wooden_woody_count)
+  ) %>%
+  arrange(desc(tannins_total))
+
+```
+
+```{r}
+print(sommelier_word_counts)
+
+```
+
+
