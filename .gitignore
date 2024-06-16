@@ -35,3 +35,8 @@ packrat/src/
 
 # Temporary files
 .tmp/
+
+
+
+# Ignore data folder
+data/
